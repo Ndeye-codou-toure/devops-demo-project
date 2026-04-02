@@ -8,11 +8,6 @@ pipeline {
     environment {
         DOCKERHUB_CREDENTIALS = credentials('dockerhub')
         GITHUB_TOKEN = credentials('github')
-        SONARQUBE_TOKEN = credentials('sonarqube')
-        // IMPORTANT : Remplacez par votre username DockerHub
-        DOCKER_IMAGE = "ndeyecodou/demo-java-app"
-        // Remplacez par votre username GitHub
-        GITHUB_REPO = "https://github.com/Ndeye-codou-toure/devops-demo-project.git"
     }
 
     stages {
@@ -25,7 +20,7 @@ pipeline {
         stage('Checkout') {
             steps {
                 git branch: 'main',
-                    url: "${GITHUB_REPO}",
+                    url: 'https://github.com/Ndeye-codou-toure/devops-demo-project.git',
                     credentialsId: 'github'
             }
         }
@@ -42,14 +37,7 @@ pipeline {
             steps {
                 dir('demo-java-app') {
                     withSonarQubeEnv('sonarqube') {
-                        sh """
-                            mvn sonar:sonar \
-                            -Dsonar.projectKey=spring-boot-demo \
-                            -Dsonar.projectName=spring-boot-demo \
-                            -Dsonar.host.url=http://sonarqube:9000 \
-                            -Dsonar.login=${squ_0267996211f2e9d9303f70b4bf32a28b067cccf7
-}
-                        """
+                        sh 'mvn sonar:sonar -Dsonar.projectKey=spring-boot-demo -Dsonar.projectName=spring-boot-demo'
                     }
                 }
             }
@@ -58,9 +46,9 @@ pipeline {
         stage('Build and Push Docker Image') {
             steps {
                 script {
-                    sh "docker build -t ${DOCKER_IMAGE}:${params.build_version} ./demo-java-app"
+                    sh "docker build -t ndeyecodou/demo-java-app:${params.build_version} ./demo-java-app"
                     sh "echo ${DOCKERHUB_CREDENTIALS_PSW} | docker login -u ${DOCKERHUB_CREDENTIALS_USR} --password-stdin"
-                    sh "docker push ${DOCKER_IMAGE}:${params.build_version}"
+                    sh "docker push ndeyecodou/demo-java-app:${params.build_version}"
                 }
             }
         }
@@ -68,15 +56,12 @@ pipeline {
         stage('Update Deployment Tag') {
             steps {
                 script {
+                    sh "sed -i 's|tag:.*|tag: ${params.build_version}|' helm/app/values.yaml"
                     sh """
-                        sed -i 's|tag:.*|tag: ${params.build_version}|' helm/app/values.yaml
-                    """
-
-                    sh """
-                        git config user.email "jenkins@ci.com"
-                        git config user.name "Jenkins CI"
+                        git config user.email 'jenkins@ci.com'
+                        git config user.name 'Jenkins CI'
                         git add helm/app/values.yaml
-                        git commit -m "Update deployment image to version ${params.build_version}"
+                        git commit -m 'Update deployment image to version ${params.build_version}'
                         git push https://${GITHUB_TOKEN}@github.com/Ndeye-codou-toure/devops-demo-project.git main
                     """
                 }
