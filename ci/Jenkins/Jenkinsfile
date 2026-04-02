@@ -42,13 +42,18 @@ pipeline {
                 }
             }
         }
-
 	stage('Build and Push Docker Image') {
             steps {
                 dir('demo-java-app') {
                     script {
                         sh "docker build -t ndeyecodou/demo-java-app:${params.build_version} ."
-                        sh "echo ${DOCKERHUB_CREDENTIALS_PSW} | docker login -u ${DOCKERHUB_CREDENTIALS_USR} --password-stdin"
+                    }
+                    withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                        sh '''
+                            echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                        '''
+                    }
+                    script {
                         sh "docker push ndeyecodou/demo-java-app:${params.build_version}"
                     }
                 }
