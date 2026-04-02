@@ -43,16 +43,17 @@ pipeline {
             }
         }
 
-        stage('Build and Push Docker Image') {
+	stage('Build and Push Docker Image') {
             steps {
-                script {
-                    sh "docker build -t ndeyecodou/demo-java-app:${params.build_version} ./demo-java-app"
-                    sh "echo ${DOCKERHUB_CREDENTIALS_PSW} | docker login -u ${DOCKERHUB_CREDENTIALS_USR} --password-stdin"
-                    sh "docker push ndeyecodou/demo-java-app:${params.build_version}"
+                dir('demo-java-app') {
+                    script {
+                        sh "docker build -t ndeyecodou/demo-java-app:${params.build_version} ."
+                        sh "echo ${DOCKERHUB_CREDENTIALS_PSW} | docker login -u ${DOCKERHUB_CREDENTIALS_USR} --password-stdin"
+                        sh "docker push ndeyecodou/demo-java-app:${params.build_version}"
+                    }
                 }
             }
         }
-
         stage('Update Deployment Tag') {
             steps {
                 script {
