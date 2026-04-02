@@ -1,12 +1,14 @@
-# Base image 
-#FROM openjdk
+# Base image
 FROM eclipse-temurin:17-jdk
+
 # setting artifact path
-ARG artifact=target/demo-java-app.jar
+ARG artifact=target/spring-boot-web.jar
 
-WORKDIR /opt/app
+# copying artifact to /opt/app
+COPY ${artifact} /opt/app/spring-boot-web.jar
 
-COPY ${artifact} app.jar
+# exposing port
+EXPOSE 8080
 
-# Entrypoint for running app
-ENTRYPOINT ["java","-jar","app.jar"]
+# starting the application
+ENTRYPOINT ["java", "-jar", "/opt/app/spring-boot-web.jar"]
