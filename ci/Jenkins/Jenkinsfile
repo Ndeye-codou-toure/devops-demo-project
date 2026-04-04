@@ -67,8 +67,8 @@ pipeline {
                         git config user.email 'jenkins@ci.com'
                         git config user.name 'Jenkins CI'
                         git add helm/app/values.yaml
-                        git commit -m 'Update deployment image to version ${params.build_version}'
-                        git push https://${GITHUB_TOKEN}@github.com/Ndeye-codou-toure/devops-demo-project.git main
+			git diff --staged --quiet || git commit -m 'Update deployment image to version ${params.build_version}'
+                        git push https://${GITHUB_TOKEN}@github.com/Ndeye-codou-toure/devops-demo-project.git main || true
                     """
                 }
             }
