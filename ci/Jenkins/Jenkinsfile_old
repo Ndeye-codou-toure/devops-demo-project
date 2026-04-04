@@ -1,0 +1,86 @@
+pipeline {
+    agent any
+
+    parameters {
+        string(name: 'build_version', defaultValue: 'V1.0', description: 'Build version to use for Docker image')
+    }
+
+    environment {
+        DOCKERHUB_CREDENTIALS = credentials('dockerhub')
+        GITHUB_TOKEN = credentials('github')
+        SONARQUBE_TOKEN = credentials('sonarqube')
+        // IMPORTANT : Remplacez par votre username DockerHub
+        DOCKER_IMAGE = "ndeyecodou/demo-java-app"
+        // Remplacez par votre username GitHub
+        GITHUB_REPO = "https://github.com/Ndeye-codou-toure/devops-demo-project.git"
+    }
+
+    stages {
+        stage('Checkout SCM') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Checkout') {
+            steps {
+                git branch: 'main',
+                    url: "${GITHUB_REPO}",
+                    credentialsId: 'github'
+            }
+        }
+
+        stage('Build and Test') {
+            steps {
+                dir('demo-java-app') {
+                    sh 'mvn clean package -DskipTests'
+                }
+            }
+        }
+
+        stage('Static Code Analysis') {
+            steps {
+                dir('demo-java-app') {
+                    withSonarQubeEnv('sonarqube') {
+                        sh """
+                            mvn sonar:sonar \
+                            -Dsonar.projectKey=spring-boot-demo \
+                            -Dsonar.projectName=spring-boot-demo \
+                            -Dsonar.host.url=http://sonarqube:9000 \
+                            -Dsonar.login=${squ_0267996211f2e9d9303f70b4bf32a28b067cccf7
+}
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Build and Push Docker Image') {
+            steps {
+                script {
+                    sh "docker build -t ${DOCKER_IMAGE}:${params.build_version} ./demo-java-app"
+                    sh "echo ${DOCKERHUB_CREDENTIALS_PSW} | docker login -u ${DOCKERHUB_CREDENTIALS_USR} --password-stdin"
+                    sh "docker push ${DOCKER_IMAGE}:${params.build_version}"
+                }
+            }
+        }
+
+        stage('Update Deployment Tag') {
+            steps {
+                script {
+                    sh """
+                        sed -i 's|tag:.*|tag: ${params.build_version}|' helm/app/values.yaml
+                    """
+
+                    sh """
+                        git config user.email "jenkins@ci.com"
+                        git config user.name "Jenkins CI"
+                        git add helm/app/values.yaml
+                        git commit -m "Update deployment image to version ${params.build_version}"
+                        git push https://${GITHUB_TOKEN}@github.com/Ndeye-codou-toure/devops-demo-project.git main
+                    """
+                }
+            }
+        }
+    }
+}
